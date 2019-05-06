@@ -21,21 +21,39 @@ public class TicketService {
 	@Value("${damai.api.search}")
 	private String searchUrl;
 	
-	
 	@Value("${damai.api.getDetail}")
 	private String detailUrl;
 	
+	@Value("${damai.api.buy}")
+	private String buyUrl;
+	
 	public static void main(String[] args) throws Exception {
 		Map<String, Object> params = new HashMap<String, Object>();
-//		params.put("keyword", "周杰伦");
-//		params.put("tsg", 0);
-//		params.put("order", 0);
-//		params.put("pageSize", 20);
-//		params.put("currPage", 1);
 		params.put("spm", "a2oeg.home.card_0.ditem_2.1eeb23e1SHWj77");
-		params.put("id", "593131142099");
+		//592432015785：麦田音乐节， 592804006433：2019上海炉火音乐节，592029157846：【杭州站】西湖音乐节, 592383616752林宥嘉
+		String orderBaseNo = "592685102712";
+		params.put("id", orderBaseNo);
 		TicketService ts = new TicketService();
 		String data = ts.getDetail(params);
+		String ticketId = orderBaseNo + "_1_" + "4253460047956";
+		System.out.println(ticketId);
+//		ts.buy(buyParams);
+	}
+	
+	public JSONObject login(Map<String, Object> params) throws Exception {
+		String loginUrl = "https://ipassport.damai.cn/newlogin/login.do";
+		HttpResponse response = HttpUtil.postFormData(loginUrl, params);
+		String data = response.getBody();
+		String cookie = response.getCookie();
+		JSONObject jobj = JSONObject.parseObject(data);
+		return jobj;
+	}
+	
+	public void buy(Map<String, Object> params) throws Exception {
+		String buyUrl="https://buy.damai.cn/multi/trans/createOrder?feature={\"returnUrl\":\"https://orders.damai.cn/orderDetail\",\"serviceVersion\":\"1.8.5\"}";
+		HttpResponse response = HttpUtil.get(buyUrl, new HashMap<String, Object>());
+		String data = response.getBody();
+		JSONObject jobj = JSONObject.parseObject(data);
 	}
 	
 	public String search(Map<String, Object> params) throws Exception {
@@ -64,13 +82,13 @@ public class TicketService {
 				String skuListStr = String.valueOf(perform.get("skuList"));
 				JSONArray skuArray = JSONArray.parseArray(skuListStr);
 				List<JSONObject> skuJobjList = skuArray.toJavaList(JSONObject.class);
+				System.out.println("演出场次："+ perform.get("performName"));
 				for(JSONObject skuJobj : skuJobjList) {
 					String skuName = skuJobj.getString("skuName");
 					String skuId = skuJobj.getString("skuId");
-					System.out.println("skuName: " + skuName);
-					System.out.println("skuId: " + skuId);
-					System.out.println("\n\t");
+					System.out.println("skuName: " + skuName + ", "+"skuId: " + skuId);
 				}
+				System.out.println("\n\t");
 			}
 		}
 		return text;
