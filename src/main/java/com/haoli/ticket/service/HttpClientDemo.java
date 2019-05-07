@@ -1,12 +1,15 @@
 package com.haoli.ticket.service;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
 
+import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.http.HeaderIterator;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.CookieStore;
@@ -34,9 +37,129 @@ import com.haoli.sdk.web.domain.JsonResponse;
 @RestController
 public class HttpClientDemo {
 	
+	public static void main(String[] args) {
+		HttpClientDemo hcd = new HttpClientDemo();
+		List<String> confrimOrder_1 = hcd.buildConfrimOrder();
+		JSONObject hierarchy = hcd.buildHierarchy(confrimOrder_1);
+		JSONObject data = new JSONObject();
+		JSONObject result = new JSONObject();
+		result.put("hierarchy", hierarchy);
+		for(String s : confrimOrder_1) {
+			if(s.contains("dmTicketBuyer_")) {
+				String dmTicketBuyer_id = s.split("_")[1];
+				JSONObject dmTicketBuyer = hcd.buildTicketBuyer(dmTicketBuyer_id);
+				data.put(s, dmTicketBuyer);
+			}
+		}
+		result.put("data", data);
+		System.out.println(result.toJSONString());
+	}
+	
+	
+	public JSONObject buildTicketBuyer(String id) {
+		JSONObject dmTicketBuyer = new JSONObject();
+		JSONObject fields = this.buildTicketBuyerFields();
+		dmTicketBuyer.put("ref", "854e4c1");
+		dmTicketBuyer.put("submit", true);
+		dmTicketBuyer.put("id", id);
+		dmTicketBuyer.put("tag", "dmTicketBuyer");
+		dmTicketBuyer.put("fields", fields);
+		dmTicketBuyer.put("type", "biz");
+		return dmTicketBuyer;
+	}
+	
+	public JSONObject buildTicketBuyerFields() {
+		JSONObject fields = new JSONObject();
+		fields.put("buyerTotalNum", 1);
+		fields.put("tipTemplate", "请选择1位观演人");
+		fields.put("idTypes", "5,4,1,6,3");
+		fields.put("errorMessage", "请选择观演人");
+		fields.put("title", "观演人");
+		fields.put("isDisplay", true);
+		fields.put("selectBuyerBtnText", "选择观演人");
+		List<JSONObject> ticketBuyerList = this.buildTicketBuyerFieldsBuyerList();
+		fields.put("ticketBuyerList", ticketBuyerList);
+		return fields;
+	}
+	
+	
+	public List<JSONObject> buildTicketBuyerFieldsBuyerList() {
+		List<JSONObject> ticketBuyerList = new ArrayList<JSONObject>();
+		JSONObject buyer = new JSONObject();
+		buyer.put("identityNo", "150402199206300614");
+		buyer.put("ticketBuyerId", "1100031fb246cf370944657a20707cfc0ff2c5419452f");
+		buyer.put("idType", 1);
+		buyer.put("ticketBuyerName", "李昊");
+		buyer.put("hashIdentityNo", "150************614");
+		buyer.put("idTypeDesc", "身份证");
+		buyer.put("isDisabled", false);
+		buyer.put("isUsed", true);
+		ticketBuyerList.add(buyer);
+		return ticketBuyerList;
+	}
+	
+	public JSONObject buildHierarchy(List<String> confrimOrder) {
+		JSONObject structure = new JSONObject();
+		structure.put("confirmOrder_1", confrimOrder);
+		JSONObject hierarchy = new JSONObject();
+		hierarchy.put("structure", structure);
+		return hierarchy;
+	}
+	
+	
+	public List<String> buildConfrimOrder() {
+		Random random = new Random();
+		List<Integer> numberList = new ArrayList<Integer>();
+		int root = random.nextInt(9)+1;
+		int x = root*10 + root*100;
+		numberList.add(x + random.nextInt(10));
+		while(numberList.size() < 10) {
+			int y = x+random.nextInt(10);
+			if(numberList.contains(y)) {
+				continue;
+			}
+			numberList.add(y);
+		}
+		Collections.shuffle(numberList);
+		JSONObject structure = new JSONObject();
+		List<String> tconfirmOrder_1 = new ArrayList<String>();
+		List<String> confirmOrder_1 = new ArrayList<String>();
+		String dmDeliveryWay = "dmDeliveryWay_33";
+		String dmTicketBuyer = "dmTicketBuyer_33";
+		String dmPayType = "dmPayType_33";
+		String dmItem = "dmItem_33";
+		String dmInvoice = "dmInvoice_33";
+		String order = "order_" + RandomStringUtils.randomAlphanumeric(32).toLowerCase();
+		String dmPayDetail = "dmPayDetail_33";
+		String dmTerm = "dmTerm_33";
+		String dmOrderPay = "dmOrderPay_33";
+		String dmSubmitOrder = "dmSubmitOrder_33";
+		String dmExtraAttributes = "dmExtraAttributes_33";
+		tconfirmOrder_1.add(dmDeliveryWay);
+		tconfirmOrder_1.add(dmTicketBuyer);
+		tconfirmOrder_1.add(dmPayType);
+		tconfirmOrder_1.add(dmItem);
+		tconfirmOrder_1.add(dmInvoice);
+		tconfirmOrder_1.add(dmPayDetail);
+		tconfirmOrder_1.add(dmTerm);
+		tconfirmOrder_1.add(dmOrderPay);
+		tconfirmOrder_1.add(dmSubmitOrder);
+		tconfirmOrder_1.add(dmExtraAttributes);
+		for(int j = 0; j<10; j++) {
+			String s = tconfirmOrder_1.get(j);
+			s += String.valueOf(numberList.get(j));
+			confirmOrder_1.add(s);
+		}
+		confirmOrder_1.add(order);
+		return confirmOrder_1;
+	}
+	
+	
+	
+	
 	
 	@PostMapping("/login2")
-	public JsonResponse<JSONObject> doPost(@RequestBody Map<String, String> map) throws Exception{
+	public JsonResponse<Map<String, Object>> doPost(@RequestBody Map<String, String> map) throws Exception{
 	    CloseableHttpClient httpClient = null;
 	    HttpPost httpPost = null;
         CookieStore cookieStore = new BasicCookieStore();
@@ -57,13 +180,15 @@ public class HttpClientDemo {
         JSONObject jobj = JSONObject.parseObject(content);
         JSONObject data = JSONObject.parseObject(JSONObject.parseObject(jobj.getString("content")).getString("data"));
         String st = data.getString("st");
-        String redirectUrl = data.getString("returnUrl");
+        String redirectUrl = "https%253A%252F%252Fwww.damai.cn%252F";
         StringBuilder sb = new StringBuilder("https://passport.damai.cn/dologin.htm?");
         sb.append("st=" + st);
         sb.append("&redirectUrl=" + redirectUrl);
+        sb.append("&platform=106002");
         String getLoginUrl = sb.toString();
         HttpGet httpGet = new HttpGet(getLoginUrl);
         CloseableHttpResponse response2 = httpClient.execute(httpGet);
+        int code = response2.getStatusLine().getStatusCode();
         String content2 = EntityUtils.toString(response2.getEntity());
         List<Cookie> cookies = cookieStore.getCookies();
         Map<String, Object> result = new HashMap<String, Object>();
@@ -72,7 +197,7 @@ public class HttpClientDemo {
         	String value = cookie.getValue();
         	result.put(name, value);
         }
-        return new JsonResponse<JSONObject>(JSONObject.parseObject(content));
+        return new JsonResponse<Map<String, Object>>(result);
     }
 	
 	
