@@ -39,20 +39,267 @@ public class HttpClientDemo {
 	
 	public static void main(String[] args) {
 		HttpClientDemo hcd = new HttpClientDemo();
-		List<String> confrimOrder_1 = hcd.buildConfrimOrder();
-		JSONObject hierarchy = hcd.buildHierarchy(confrimOrder_1);
+		JSONObject result = hcd.buildOrderParams();
+		System.out.println(result.toJSONString());
+	}
+	
+	
+	@PostMapping("/createOrder")
+	public JsonResponse<List<Map<String, Object>>> createOrder(@RequestBody Map<String, String> map) throws Exception{
+	    CloseableHttpClient httpClient = null;
+	    HttpPost httpPost = null;
+        CookieStore cookieStore = new BasicCookieStore();
+        httpClient = HttpClients.custom().setDefaultCookieStore(cookieStore).build();
+        httpPost = new HttpPost("https://ipassport.damai.cn/newlogin/login.do");
+        List<NameValuePair> list = new ArrayList<NameValuePair>();
+        Iterator<Map.Entry<String, String>> iterator = map.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Entry<String, String> elem = (Entry<String, String>) iterator.next();
+            list.add(new BasicNameValuePair(elem.getKey(), elem.getValue()));
+        }
+        if (list.size() > 0) {
+            UrlEncodedFormEntity entity = new UrlEncodedFormEntity(list, "UTF-8");
+            httpPost.setEntity(entity);
+        }
+        CloseableHttpResponse response = httpClient.execute(httpPost);
+        String content = EntityUtils.toString(response.getEntity());
+        JSONObject jobj = JSONObject.parseObject(content);
+        JSONObject data = JSONObject.parseObject(JSONObject.parseObject(jobj.getString("content")).getString("data"));
+        String st = data.getString("st");
+        String redirectUrl = "https%253A%252F%252Fwww.damai.cn%252F";
+        StringBuilder sb = new StringBuilder("https://passport.damai.cn/dologin.htm?");
+        sb.append("st=" + st);
+        sb.append("&redirectUrl=" + redirectUrl);
+        sb.append("&platform=106002");
+        String getLoginUrl = sb.toString();
+        HttpGet httpGet = new HttpGet(getLoginUrl);
+        CloseableHttpResponse response2 = httpClient.execute(httpGet);
+        int code = response2.getStatusLine().getStatusCode();
+        String content2 = EntityUtils.toString(response2.getEntity());
+        List<Cookie> cookies = cookieStore.getCookies();
+        List<Map<String, Object>> result = new ArrayList<Map<String, Object>>();
+        for(Cookie cookie : cookies) {
+        	String name = cookie.getName();
+        	String value = cookie.getValue();
+        	String domain = cookie.getDomain();
+        	String path = cookie.getPath();
+        	Map<String, Object> cookieOne = new HashMap<String, Object>();
+        	cookieOne.put("name", name);
+        	cookieOne.put("value", value);
+        	cookieOne.put("domain", domain);
+        	cookieOne.put("path", path);
+        	result.add(cookieOne);
+        }
+//        JSONObject orderParams = this.buildOrderParams();
+//        String orderUrl = "https://buy.damai.cn/multi/trans/createOrder";
+//        HttpPost orderPost = new HttpPost(orderUrl);
+//        
+//        List<NameValuePair> list3 = new ArrayList<NameValuePair>();
+//        Iterator<Map.Entry<String, Object>> iterator3 = orderParams.toJavaObject(Map.class).entrySet().iterator();
+//        while (iterator3.hasNext()) {
+//            Entry<String, Object> elem = (Entry<String, Object>) iterator3.next();
+//            String valueStr = String.valueOf(elem.getValue());
+//            list3.add(new BasicNameValuePair(elem.getKey(),valueStr));
+//        }
+//        if (list3.size() > 0) {
+//            UrlEncodedFormEntity entity = new UrlEncodedFormEntity(list, "UTF-8");
+//            orderPost.setEntity(entity);
+//        }
+//        while(true) {
+//            CloseableHttpResponse response3 = httpClient.execute(orderPost);
+//            String content3 = EntityUtils.toString(response3.getEntity());
+//            System.out.println(content3);
+//            if(JSONObject.parseObject(content3).get("resultCode").equals("0")) {
+//            	break;
+//            }
+//        }
+        return new JsonResponse<List<Map<String, Object>>>(result);
+    }
+	
+	
+	
+	public JSONObject buildOrderParams() {
+		List<String> confrimOrder_1 = this.buildConfrimOrder();
+		JSONObject hierarchy = this.buildHierarchy(confrimOrder_1);
 		JSONObject data = new JSONObject();
 		JSONObject result = new JSONObject();
 		result.put("hierarchy", hierarchy);
 		for(String s : confrimOrder_1) {
 			if(s.contains("dmTicketBuyer_")) {
 				String dmTicketBuyer_id = s.split("_")[1];
-				JSONObject dmTicketBuyer = hcd.buildTicketBuyer(dmTicketBuyer_id);
+				JSONObject dmTicketBuyer = this.buildTicketBuyer(dmTicketBuyer_id);
 				data.put(s, dmTicketBuyer);
+			}
+			if(s.contains("dmTerm_")) {
+				String dmTerm_id = s.split("_")[1];
+				JSONObject dmTerm = this.buildDmTerm(dmTerm_id);
+				data.put(s, dmTerm);
+			}
+			if(s.contains("dmItem_")) {
+				String dmItem_id = s.split("_")[1];
+				JSONObject dmItem = this.buildDmItem(dmItem_id);
+				data.put(s, dmItem);
+			}
+			if(s.contains("dmDeliveryWay_")) {
+				String dmDeliveryWay_id = s.split("_")[1];
+				JSONObject dmDeliveryWay = this.buildDmDeliveryWay(dmDeliveryWay_id);
+				data.put(s, dmDeliveryWay);
 			}
 		}
 		result.put("data", data);
-		System.out.println(result.toJSONString());
+		return result;
+	}
+	
+	
+	public JSONObject buildDmDeliveryWay(String id) {
+		JSONObject dmDeliveryWayFields = this.buildDmDeliveryWayFields();
+ 		JSONObject dmDeliveryWay = new JSONObject();
+		dmDeliveryWay.put("ref", "610edbc");
+		dmDeliveryWay.put("submit", true);
+		dmDeliveryWay.put("id", id);
+		dmDeliveryWay.put("tag", "dmDeliveryWay");
+		dmDeliveryWay.put("fields", dmDeliveryWayFields);
+		dmDeliveryWay.put("type", "biz");
+		return dmDeliveryWay;
+	}
+	
+	public JSONObject buildDmDeliveryWayFields() {
+		JSONObject fields = new JSONObject();
+		List<JSONObject> dmDeliveryWayList = this.buildDmDeliveryWayFieldsWayList();
+		fields.put("title", "配送方式");
+		fields.put("dmDeliveryWayList", dmDeliveryWayList);
+		return fields;
+	}
+	
+	public List<JSONObject> buildDmDeliveryWayFieldsWayList(){
+		List<JSONObject> dmDeliveryWayList = new ArrayList<JSONObject>();
+		JSONObject deliveryWay = new JSONObject();
+		JSONObject dmPhone = new JSONObject();
+		dmPhone.put("code", "中国大陆|+86;中国香港|+852;中国澳门|+853;中国台湾地区|+886");
+		dmPhone.put("icon", "https://gw.alicdn.com/tfs/TB17jxYdDtYBeNjy1XdXXXXyVXa-48-48.png");
+		dmPhone.put("title", "手机号：");
+		dmPhone.put("selectCode", "");
+		dmPhone.put("isDisplay", false);
+		deliveryWay.put("dmPhone", dmPhone);
+		
+		deliveryWay.put("isDefault", true);
+		
+		JSONObject dmTicketAddress = new JSONObject();
+		dmTicketAddress.put("title", "取票地址：");
+		dmTicketAddress.put("isDisplay", false);
+		deliveryWay.put("dmTicketAddress", dmTicketAddress);
+		
+		JSONObject dmShippingAddress = new JSONObject();
+		dmShippingAddress.put("addressDetail", "北京北京市大兴区北京经济技术开发区观海苑8号楼2单元1602室");
+		dmShippingAddress.put("phone", "18515672163");
+		dmShippingAddress.put("addAddressTip", "");
+		dmShippingAddress.put("name", "李昊");
+		dmShippingAddress.put("title", "地址：");
+		dmShippingAddress.put("isDisplay", true);
+		dmShippingAddress.put("isUsed", true);
+		dmShippingAddress.put("addressId", 91978806);
+		dmShippingAddress.put("status", 0);
+		deliveryWay.put("dmShippingAddress", dmShippingAddress);
+		
+		
+		deliveryWay.put("deliveryTip", "");
+		deliveryWay.put("deliveryType", 2);
+		deliveryWay.put("title", "快递");
+		
+		JSONObject dmContact = new JSONObject();
+		dmContact.put("title",  "联系人：");
+		dmContact.put("isDisplay", false);
+		deliveryWay.put("dmContact", dmContact);
+		
+		JSONObject dmEmail = new JSONObject();
+		dmEmail.put("title",  "邮箱：");
+		dmEmail.put("isDisplay", false);
+		deliveryWay.put("dmEmail", dmEmail);
+		
+		JSONObject dmPostFee = new JSONObject();
+		dmPostFee.put("amount", "10.00");
+		dmPostFee.put("currency", "￥");
+		dmPostFee.put("title",  "运费：");
+		dmPostFee.put("isDisplay", true);
+		deliveryWay.put("dmPostFee", dmPostFee);
+		
+		dmDeliveryWayList.add(deliveryWay);
+		return dmDeliveryWayList;
+		
+	}
+	
+	public JSONObject buildDmItem(String id) {
+		JSONObject dmItemFields = this.buildDmItemFields();
+		JSONObject dmItem = new JSONObject();
+		dmItem.put("ref", "f46382d");
+		dmItem.put("submit", true);
+		dmItem.put("id", id);
+		dmItem.put("tag", "dmItem");
+		dmItem.put("fields", dmItemFields);
+		dmItem.put("type", "biz");
+		return dmItem;
+	}
+	
+	public JSONObject buildDmItemFields() {
+		JSONObject fields = new JSONObject();
+		fields.put("performShowTime", "2019.05.25 12:30-22:00");
+		fields.put("splitChar", "|");
+		fields.put("quantity", 1);
+		fields.put("ticketPrice", "￥660.00票档");
+		fields.put("liveDesc", "北京／2019.05.25 12:30-22:00／北京长阳音乐主题公园");
+		fields.put("totalPrice", "660.00");
+		fields.put("shopLogo", "//gw.alicdn.com/tfs/TB1CzD7SXXXXXXJaXXXXXXXXXXX-32-32.png");
+		fields.put("seatTitle", "座位信息");
+		fields.put("shopName", "大麦网官方旗舰店");
+		fields.put("liveCity", "北京");
+		fields.put("skuEntries", this.buildDmItemFieldsSkuEntries());
+		fields.put("venueName", "北京长阳音乐主题公园");
+		fields.put("itemId", 592432015785L);
+		fields.put("picUrl", "http://img.alicdn.com/imgextra/i1/2251059038/O1CN01vgwaBm2GdS9yA4EQg_!!0-item_pic.jpg");
+		fields.put("ticketQuantity", "×1张");
+		fields.put("unit", "张");
+		fields.put("refundTips", "购票须知");
+		fields.put("currency", "￥");
+		fields.put("projectName", "2019麦田音乐节-北京");
+		return fields;
+	}
+	
+	public List<JSONObject> buildDmItemFieldsSkuEntries(){
+		List<JSONObject> skuEntries = new ArrayList<JSONObject>();
+		JSONObject skuEntry = new JSONObject();
+		skuEntry.put("quantity", 1);
+		skuEntry.put("totalPrice", "660.00"	);
+		skuEntry.put("price", "660.00");
+		skuEntry.put("seatInfo", "");
+		skuEntries.add(skuEntry);
+		return skuEntries;
+	}
+	
+	
+	public JSONObject buildDmTerm(String id) {
+		JSONObject dmTerm = new JSONObject();
+		JSONObject dmTermFields = this.buildDmTermFields();
+		dmTerm.put("ref", "a2380ef");
+		dmTerm.put("submit", true);
+		dmTerm.put("id", id);
+		dmTerm.put("tag", "dmTerm");
+		dmTerm.put("fields", dmTermFields);
+		dmTerm.put("type", "biz");
+		return dmTerm;
+	}
+	
+	public JSONObject buildDmTermFields() {
+		JSONObject fields = new JSONObject();
+		List<JSONObject> termList = new ArrayList<JSONObject>();
+		JSONObject term = new JSONObject();
+		term.put("termURL", "https://x.damai.cn/markets/app/agreements");
+		term.put("termName", "《大麦网订票服务条款》");
+		term.put("termContent", "最终解释权归大麦所有");
+		termList.add(term);
+		fields.put("termList", termList);
+		fields.put("isAgree", true);
+		fields.put("termTip", "同意");
+		return fields;
 	}
 	
 	
@@ -153,52 +400,6 @@ public class HttpClientDemo {
 		confirmOrder_1.add(order);
 		return confirmOrder_1;
 	}
-	
-	
-	
-	
-	
-	@PostMapping("/login2")
-	public JsonResponse<Map<String, Object>> doPost(@RequestBody Map<String, String> map) throws Exception{
-	    CloseableHttpClient httpClient = null;
-	    HttpPost httpPost = null;
-        CookieStore cookieStore = new BasicCookieStore();
-        httpClient = HttpClients.custom().setDefaultCookieStore(cookieStore).build();
-        httpPost = new HttpPost("https://ipassport.damai.cn/newlogin/login.do");
-        List<NameValuePair> list = new ArrayList<NameValuePair>();
-        Iterator<Map.Entry<String, String>> iterator = map.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Entry<String, String> elem = (Entry<String, String>) iterator.next();
-            list.add(new BasicNameValuePair(elem.getKey(), elem.getValue()));
-        }
-        if (list.size() > 0) {
-            UrlEncodedFormEntity entity = new UrlEncodedFormEntity(list, "UTF-8");
-            httpPost.setEntity(entity);
-        }
-        CloseableHttpResponse response = httpClient.execute(httpPost);
-        String content = EntityUtils.toString(response.getEntity());
-        JSONObject jobj = JSONObject.parseObject(content);
-        JSONObject data = JSONObject.parseObject(JSONObject.parseObject(jobj.getString("content")).getString("data"));
-        String st = data.getString("st");
-        String redirectUrl = "https%253A%252F%252Fwww.damai.cn%252F";
-        StringBuilder sb = new StringBuilder("https://passport.damai.cn/dologin.htm?");
-        sb.append("st=" + st);
-        sb.append("&redirectUrl=" + redirectUrl);
-        sb.append("&platform=106002");
-        String getLoginUrl = sb.toString();
-        HttpGet httpGet = new HttpGet(getLoginUrl);
-        CloseableHttpResponse response2 = httpClient.execute(httpGet);
-        int code = response2.getStatusLine().getStatusCode();
-        String content2 = EntityUtils.toString(response2.getEntity());
-        List<Cookie> cookies = cookieStore.getCookies();
-        Map<String, Object> result = new HashMap<String, Object>();
-        for(Cookie cookie : cookies) {
-        	String name = cookie.getName();
-        	String value = cookie.getValue();
-        	result.put(name, value);
-        }
-        return new JsonResponse<Map<String, Object>>(result);
-    }
 	
 	
 	@PostMapping("/login3")
