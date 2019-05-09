@@ -44,8 +44,8 @@ public class HttpClientDemo {
 	}
 	
 	
-	@PostMapping("/createOrder")
-	public JsonResponse<List<Map<String, Object>>> createOrder(@RequestBody Map<String, String> map) throws Exception{
+	@PostMapping("/login2")
+	public JsonResponse<List<Map<String, Object>>> login2(@RequestBody Map<String, String> map) throws Exception{
 	    CloseableHttpClient httpClient = null;
 	    HttpPost httpPost = null;
         CookieStore cookieStore = new BasicCookieStore();
@@ -61,6 +61,7 @@ public class HttpClientDemo {
             UrlEncodedFormEntity entity = new UrlEncodedFormEntity(list, "UTF-8");
             httpPost.setEntity(entity);
         }
+        
         CloseableHttpResponse response = httpClient.execute(httpPost);
         String content = EntityUtils.toString(response.getEntity());
         JSONObject jobj = JSONObject.parseObject(content);
@@ -90,29 +91,6 @@ public class HttpClientDemo {
         	cookieOne.put("path", path);
         	result.add(cookieOne);
         }
-//        JSONObject orderParams = this.buildOrderParams();
-//        String orderUrl = "https://buy.damai.cn/multi/trans/createOrder";
-//        HttpPost orderPost = new HttpPost(orderUrl);
-//        
-//        List<NameValuePair> list3 = new ArrayList<NameValuePair>();
-//        Iterator<Map.Entry<String, Object>> iterator3 = orderParams.toJavaObject(Map.class).entrySet().iterator();
-//        while (iterator3.hasNext()) {
-//            Entry<String, Object> elem = (Entry<String, Object>) iterator3.next();
-//            String valueStr = String.valueOf(elem.getValue());
-//            list3.add(new BasicNameValuePair(elem.getKey(),valueStr));
-//        }
-//        if (list3.size() > 0) {
-//            UrlEncodedFormEntity entity = new UrlEncodedFormEntity(list, "UTF-8");
-//            orderPost.setEntity(entity);
-//        }
-//        while(true) {
-//            CloseableHttpResponse response3 = httpClient.execute(orderPost);
-//            String content3 = EntityUtils.toString(response3.getEntity());
-//            System.out.println(content3);
-//            if(JSONObject.parseObject(content3).get("resultCode").equals("0")) {
-//            	break;
-//            }
-//        }
         return new JsonResponse<List<Map<String, Object>>>(result);
     }
 	
