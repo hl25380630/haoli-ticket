@@ -1,97 +1,186 @@
 package com.haoli.ticket.service;
 
+import java.net.URLDecoder;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
+import org.apache.http.cookie.Cookie;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.interactions.Actions;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.RestController;
 
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
-import com.haoli.sdk.web.util.HttpUtil;
-import com.haoli.sdk.web.util.HttpUtil.HttpResponse;
+import com.haoli.sdk.web.util.MapUtil;
+import com.haoli.ticket.domain.DamaiClient;
 
-@Service
+
+@RestController
 public class TicketService {
 	
-	@Value("${damai.api.search}")
-	private String searchUrl;
+	@Autowired
+	private DamaiClient damaiClient;
 	
-	@Value("${damai.api.getDetail}")
-	private String detailUrl;
+	@Value("${damai.mainPage.url}")
+	private String damaiMainPage;
+
 	
-	@Value("${damai.api.buy}")
-	private String buyUrl;
+    public void buyDamaiTicket(Map<String, Object> map) throws Exception {
+    	//设置chrome driver位置
+    	String chromeDriverPath = MapUtil.getString(map, "chromeDriverPath");
+    	String searchKey = MapUtil.getString(map, "searchKey");
+    	String detailItemKey = MapUtil.getString(map, "detailItemKey");
+    	String price = MapUtil.getString(map, "price");
+        System.setProperty("webdriver.chrome.driver",chromeDriverPath);
+        //配置浏览器
+        ChromeOptions options=new ChromeOptions();
+        //是否已开发者模式打开浏览器
+        //options.setExperimentalOption("excludeSwitches", Collections.singletonList("enable-automation"));
+        ChromeDriver browser = new ChromeDriver(options);
+        browser.manage().window().maximize(); //设置窗口最大化
+        //大麦网首页
+        browser.get(damaiMainPage);
+        //模拟登录，讲cookie写入浏览器，绕过登录验证
+        this.setCookie(browser);
+        Thread.sleep(1000);
+        //刷新页面达到登录效果
+        browser.navigate().refresh();
+        Actions action = new Actions(browser);
+        //搜寻想要查找的内容
+        browser.findElementByClassName("input-search").sendKeys(searchKey);
+        WebElement searchButton = browser.findElementByClassName("btn-search");//点击搜索按钮
+        action.click(searchButton).perform();
+        List<WebElement> itemList = browser.findElementsByTagName("a");
+        List<String> targetUrlList = new ArrayList<String>();
+        Map<String, WebElement> elementMap = new HashMap<String, WebElement>();
+        Map<String, String> urlTitleMap = new HashMap<String, String>();
+        for(WebElement item : itemList) {
+        	String url = item.getAttribute("href");
+        	if(url.contains("https://detail.damai.cn/item.htm")) {
+        		url = URLDecoder.decode(url, "UTF-8");
+        		targetUrlList.add(url);
+        		elementMap.put(url, item);
+                String params = url.split("\\?")[1];
+                String[] paramArray = params.split("\\&");
+                String title = "";
+                for(String param : paramArray) {
+                	if(param.contains("clicktitle")) {
+                		title = param.split("=")[1];
+                	}
+                }
+                urlTitleMap.put(title, url);
+        	}
+        }
+        String targetUrl = "";
+        for(Map.Entry<String, String> entry : urlTitleMap.entrySet()) {
+        	String title = entry.getKey();
+        	if(title.equals(detailItemKey)) {
+        		targetUrl = entry.getValue();
+        	}
+        }
+        String params = targetUrl.split("\\?")[1];
+        String[] paramArray = params.split("\\&");
+        String title = "";
+        for(String param : paramArray) {
+        	if(param.contains("clicktitle")) {
+        		title = param.split("=")[1];
+        	}
+        }
+        WebElement item = elementMap.get(targetUrl);
+        //找到要购买的item，点击进入详情页
+        action.click(item).perform();
+        //根据列表页的标题内容切换到想要购买item的详情页
+        Set<String> tabList = browser.getWindowHandles();
+        for(String tab : tabList) {
+        	browser.switchTo().window(tab);
+        	String tabTile = browser.getTitle();
+        	if(tabTile.contains(title)) {
+        		break;
+        	}
+        }
+        //选择要购买的场次，点击购买
+        List<WebElement> elementList = browser.findElementsByClassName("skuname");
+        for(WebElement element : elementList) {
+        	String text = element.getText();
+        	if(text.contains(price)) {
+        		action.click(element).perform();
+        	}
+        }
+        List<WebElement> buyButtonList = browser.findElementsByClassName("buybtn");
+        if(buyButtonList.size() ==1) {
+        	action.click(buyButtonList.get(0)).perform();
+        }else {
+            for(WebElement element : buyButtonList) {
+            	String text = element.getText();
+            	if("立即购买".equals(text) || "立即预定".equals(text)) {
+            		action.click(element).perform();
+            	}
+            }
+        }
+        //此时应切换到确认订单页
+        for(String tab : browser.getWindowHandles()) {
+        	browser.switchTo().window(tab);
+        	String tabTile = browser.getTitle();
+        	if(tabTile.contains("确认订单")) {
+        		break;
+        	}
+        }
+        //记录下单页面地址
+        String submitPageUrl = browser.getCurrentUrl();
+        boolean flag = true;
+        while(flag) {
+        	browser.get(submitPageUrl);
+        	this.submitOrder(browser, action);
+        	Thread.sleep(2000);
+            for(String tab : browser.getWindowHandles()) {
+            	browser.switchTo().window(tab);
+            	String tabTitle = browser.getTitle();
+            	if(tabTitle.contains("支付宝")) {
+            		flag = false;
+            		break;
+            	}
+            }
+        }
+        
+        browser.close();
+        browser.quit();
+    }
+    
+    
+    public void submitOrder(ChromeDriver browser, Actions action) throws Exception {
+        List<WebElement> checkBoxList = browser.findElementsByClassName("next-checkbox-inner");
+        for(WebElement checkBox : checkBoxList) {
+        	action.click(checkBox).perform();
+        }
+        Thread.sleep(500);
+        List<WebElement> submitButtonList = browser.findElementsByTagName("button");
+        WebElement finalSubmitButton = null;
+        for(WebElement submitButton : submitButtonList) {
+        	String text = submitButton.getText();
+        	if("同意以上协议并提交订单".equals(text)) {
+        		finalSubmitButton = submitButton;
+        	}
+        }
+        action.click(finalSubmitButton).perform();
+    }
 	
-	public static void main(String[] args) throws Exception {
-		Map<String, Object> params = new HashMap<String, Object>();
-		params.put("spm", "a2oeg.home.card_0.ditem_2.1eeb23e1SHWj77");
-		//592432015785：麦田音乐节， 592804006433：2019上海炉火音乐节，592029157846：【杭州站】西湖音乐节, 592383616752林宥嘉
-		String orderBaseNo = "592685102712";
-		params.put("id", orderBaseNo);
-		TicketService ts = new TicketService();
-		String data = ts.getDetail(params);
-		String ticketId = orderBaseNo + "_1_" + "4253460047956";
-		System.out.println(ticketId);
-//		ts.buy(buyParams);
-	}
-	
-	public JSONObject login(Map<String, Object> params) throws Exception {
-		String loginUrl = "https://ipassport.damai.cn/newlogin/login.do";
-		HttpResponse response = HttpUtil.postFormData(loginUrl, params);
-		String data = response.getBody();
-		String cookie = response.getCookie();
-		JSONObject jobj = JSONObject.parseObject(data);
-		return jobj;
-	}
-	
-	public void buy(Map<String, Object> params) throws Exception {
-		String buyUrl="https://buy.damai.cn/multi/trans/createOrder?feature={\"returnUrl\":\"https://orders.damai.cn/orderDetail\",\"serviceVersion\":\"1.8.5\"}";
-		HttpResponse response = HttpUtil.get(buyUrl, new HashMap<String, Object>());
-		String data = response.getBody();
-		JSONObject jobj = JSONObject.parseObject(data);
-	}
-	
-	public String search(Map<String, Object> params) throws Exception {
-		HttpResponse response = HttpUtil.get(searchUrl, params);
-		String data = response.getBody();
-		JSONObject jobj = JSONObject.parseObject(data);
-		JSONObject pageData = JSONObject.parseObject(String.valueOf(jobj.get("pageData")));
-		return data;
-	}
-	
-	public String getDetail(Map<String, Object> params) throws Exception {
-		String detailUrl = "https://detail.damai.cn/item.htm";
-		HttpResponse response = HttpUtil.get(detailUrl, params);
-		String data = response.getBody();
-		Document jsoupDocument =Jsoup.parse(data);
-		Element element = jsoupDocument.getElementById("dataDefault");
-		String text = element.text();
-		JSONObject jobj = JSONObject.parseObject(text);
-		JSONArray array = JSONArray.parseArray(String.valueOf(jobj.get("performBases")));
-		List<JSONObject> jobjList = array.toJavaList(JSONObject.class);
-		for(JSONObject obj : jobjList) {
-			String performStr = String.valueOf(obj.get("performs"));
-			JSONArray performArray= JSONArray.parseArray(performStr);
-			List<JSONObject> performList = performArray.toJavaList(JSONObject.class);
-			for(JSONObject perform : performList) {
-				String skuListStr = String.valueOf(perform.get("skuList"));
-				JSONArray skuArray = JSONArray.parseArray(skuListStr);
-				List<JSONObject> skuJobjList = skuArray.toJavaList(JSONObject.class);
-				System.out.println("演出场次："+ perform.get("performName"));
-				for(JSONObject skuJobj : skuJobjList) {
-					String skuName = skuJobj.getString("skuName");
-					String skuId = skuJobj.getString("skuId");
-					System.out.println("skuName: " + skuName + ", "+"skuId: " + skuId);
-				}
-				System.out.println("\n\t");
-			}
-		}
-		return text;
+	public void setCookie(ChromeDriver browser) {
+        List<Cookie> cookieList = damaiClient.getCookieList();
+        for(Cookie cookie : cookieList) {
+        	String name = cookie.getName();
+        	String value = cookie.getValue();
+        	String path = cookie.getPath();
+        	Date expireDate = cookie.getExpiryDate();
+        	String domain = "." + cookie.getDomain();
+        	org.openqa.selenium.Cookie scookie = new org.openqa.selenium.Cookie(name, value, domain, path, expireDate, true);
+        	browser.manage().addCookie(scookie);
+        }
 	}
 
 }

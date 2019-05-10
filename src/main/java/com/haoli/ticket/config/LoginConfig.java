@@ -42,6 +42,18 @@ public class LoginConfig {
     @Value("${damai.userAgent}")
     private String userAgent;
 	
+    @Value("${damai.ua}")
+    private String ua;
+    
+    @Value("${damai.csrf_token}")
+    private String csrfToken;
+    
+    @Value("${damai.hsiz}")
+    private String hsiz;
+    
+    @Value("${damai.umidToken}")
+    private String umidToken;
+    
 	@Bean
 	public DamaiClient generateDamaiClient() throws Exception{
 		DamaiClient damaiClient = new DamaiClient();
@@ -69,6 +81,7 @@ public class LoginConfig {
 		map.put("loginId", userName);
 		map.put("password2", password);
 		map.put("keepLogin", "true");
+		map.put("ua", ua);
 		map.put("umidGetStatusVal", "255");
 		map.put("screenPixel", "1536x864");
 		map.put("navlanguage", "zh-CN");
@@ -76,6 +89,15 @@ public class LoginConfig {
 		map.put("navPlatform", "Win32");
 		map.put("appName", "damai");
 		map.put("appEntrance", "damai");
+		map.put("bizParams", "");
+		map.put("csrf_token", csrfToken);
+		map.put("fromSite", "-2");
+		map.put("hsiz", hsiz);
+		map.put("isMobile", "false");
+		map.put("lang", "zh_CN");
+		map.put("mobile", "false");
+		map.put("umidToken", umidToken);
+		
 	    CloseableHttpClient httpClient = null;
 	    HttpPost httpPost = null;
         CookieStore cookieStore = new BasicCookieStore();
