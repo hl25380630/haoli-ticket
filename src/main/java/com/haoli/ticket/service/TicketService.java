@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.http.cookie.Cookie;
+import org.assertj.core.util.Arrays;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -17,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.alibaba.fastjson.JSONArray;
 import com.haoli.sdk.web.util.MapUtil;
 import com.haoli.ticket.domain.DamaiClient;
 
@@ -36,7 +38,7 @@ public class TicketService {
     	String chromeDriverPath = MapUtil.getString(map, "chromeDriverPath");
     	String searchKey = MapUtil.getString(map, "searchKey");
     	String detailItemKey = MapUtil.getString(map, "detailItemKey");
-    	String price = MapUtil.getString(map, "price");
+    	List<String> priceDetailList = JSONArray.parseArray(MapUtil.getString(map, "priceDetailList")).toJavaList(String.class);
         System.setProperty("webdriver.chrome.driver",chromeDriverPath);
         //配置浏览器
         ChromeOptions options=new ChromeOptions();
@@ -104,13 +106,34 @@ public class TicketService {
         		break;
         	}
         }
+        //记录商品详情页url
+        String itemDetailPageUrl = browser.getCurrentUrl();
+        
         //选择要购买的场次，点击购买
+        List<WebElement> sessionList = browser.findElementsByClassName("select_right_list_item");
+        for(WebElement session : sessionList) {
+        	String sessionText = session.getText();
+        	if(sessionText.contains("缺货登记")) {
+        		
+        	}
+        }
+        
+        
+        Map<String, WebElement> priceElementMap = new HashMap<String, WebElement>();
         List<WebElement> elementList = browser.findElementsByClassName("skuname");
         for(WebElement element : elementList) {
         	String text = element.getText();
-        	if(text.contains(price)) {
-        		action.click(element).perform();
+        	for(String priceDetail : priceDetailList) {
+            	if(text.contains(priceDetail)) {
+            		priceElementMap.put(priceDetail, element);
+            		action.click(element).perform();
+            	}
         	}
+        }
+        for(String price : priceDetailList) {
+        	//如果不缺货或者没票了，则按价格列表优先选择
+        	WebElement element = priceElementMap.get(price);
+        	
         }
         List<WebElement> buyButtonList = browser.findElementsByClassName("buybtn");
         if(buyButtonList.size() ==1) {
