@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.http.cookie.Cookie;
-import org.assertj.core.util.Arrays;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -18,9 +17,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.alibaba.fastjson.JSONArray;
-import com.haoli.sdk.web.util.MapUtil;
+import com.haoli.sdk.web.exception.ConditionException;
 import com.haoli.ticket.domain.DamaiClient;
+import com.haoli.ticket.domain.DamiInfo;
 
 
 @RestController
@@ -33,12 +32,13 @@ public class TicketService {
 	private String damaiMainPage;
 
 	
-    public void buyDamaiTicket(Map<String, Object> map) throws Exception {
+    public void buyDamaiTicket(DamiInfo map) throws Exception {
     	//设置chrome driver位置
-    	String chromeDriverPath = MapUtil.getString(map, "chromeDriverPath");
-    	String searchKey = MapUtil.getString(map, "searchKey");
-    	String detailItemKey = MapUtil.getString(map, "detailItemKey");
-    	List<String> priceDetailList = JSONArray.parseArray(MapUtil.getString(map, "priceDetailList")).toJavaList(String.class);
+    	String chromeDriverPath = map.getChromeDriverPath();
+    	String searchKey = map.getSearchKey();
+    	String detailItemKey = map.getDetailItemKey();
+    	List<String> priceDetailList = map.getPriceDetailList();
+    	List<String> sessionDetailList = map.getSessionDetailList();
         System.setProperty("webdriver.chrome.driver",chromeDriverPath);
         //配置浏览器
         ChromeOptions options=new ChromeOptions();
@@ -80,18 +80,12 @@ public class TicketService {
         	}
         }
         String targetUrl = "";
+        String targetTitle = "";
         for(Map.Entry<String, String> entry : urlTitleMap.entrySet()) {
         	String title = entry.getKey();
         	if(title.equals(detailItemKey)) {
+        		targetTitle = title;
         		targetUrl = entry.getValue();
-        	}
-        }
-        String params = targetUrl.split("\\?")[1];
-        String[] paramArray = params.split("\\&");
-        String title = "";
-        for(String param : paramArray) {
-        	if(param.contains("clicktitle")) {
-        		title = param.split("=")[1];
         	}
         }
         WebElement item = elementMap.get(targetUrl);
@@ -102,39 +96,45 @@ public class TicketService {
         for(String tab : tabList) {
         	browser.switchTo().window(tab);
         	String tabTile = browser.getTitle();
-        	if(tabTile.contains(title)) {
+        	if(tabTile.contains(targetTitle)) {
         		break;
         	}
         }
         //记录商品详情页url
         String itemDetailPageUrl = browser.getCurrentUrl();
-        
-        //选择要购买的场次，点击购买
         List<WebElement> sessionList = browser.findElementsByClassName("select_right_list_item");
-        for(WebElement session : sessionList) {
-        	String sessionText = session.getText();
-        	if(sessionText.contains("缺货登记")) {
-        		
-        	}
-        }
-        
-        
         Map<String, WebElement> priceElementMap = new HashMap<String, WebElement>();
-        List<WebElement> elementList = browser.findElementsByClassName("skuname");
-        for(WebElement element : elementList) {
-        	String text = element.getText();
-        	for(String priceDetail : priceDetailList) {
-            	if(text.contains(priceDetail)) {
-            		priceElementMap.put(priceDetail, element);
-            		action.click(element).perform();
+        List<WebElement> elementList = browser.findElementsByClassName("sku_item");
+        //选择要购买的场次，点击购买
+        boolean flag1 = false;
+        WebElement targetSession = sessionList.get(0);
+        WebElement targetItem = elementList.get(0);
+        label1:
+        for(String sessionDetail : sessionDetailList) {
+            for(WebElement session : sessionList) {
+            	String sessionText = session.getText();
+            	if(sessionText.contains(sessionDetail) && !sessionText.contains("缺货登记") && !sessionText.contains("无票") && !sessionText.contains("暂不可售")) {
+                    for(String priceDetail : priceDetailList) {
+                    	for(WebElement element : elementList) {
+                    		String text = element.getText();
+                        	if(text.contains(priceDetail) && !text.contains("缺货登记") && !text.contains("无票") && !text.contains("暂不可售") && !text.contains("开售登记")) {
+                        		priceElementMap.put(priceDetail, element);
+                        		targetItem = element;
+                        		targetSession = session;
+                        		flag1 = true;
+                        		break label1;
+                        	}
+                    	}
+                    }
             	}
-        	}
+            }
         }
-        for(String price : priceDetailList) {
-        	//如果不缺货或者没票了，则按价格列表优先选择
-        	WebElement element = priceElementMap.get(price);
-        	
+        if(flag1 == false) {
+        	throw new ConditionException("没有符合条件的商品");
         }
+        action.click(targetSession).perform();
+		action.click(targetItem).perform();
+        //选择好要购买的商品后点提交
         List<WebElement> buyButtonList = browser.findElementsByClassName("buybtn");
         if(buyButtonList.size() ==1) {
         	action.click(buyButtonList.get(0)).perform();
@@ -170,7 +170,6 @@ public class TicketService {
             	}
             }
         }
-        
         browser.close();
         browser.quit();
     }

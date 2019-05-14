@@ -53,6 +53,16 @@ public class LoginConfig {
     
     @Value("${damai.umidToken}")
     private String umidToken;
+	
+	@Value("${damai.nocAppKey}")
+	private String nocAppKey;
+	
+	@Value("${damai.csessionid}")
+	private String csessionid;
+	
+	@Value("${damai.sig}")
+	private String sig;
+	
     
 	@Bean
 	public DamaiClient generateDamaiClient() throws Exception{
@@ -75,6 +85,7 @@ public class LoginConfig {
 		damaiClient.setCookieList(cookieList);
 		return damaiClient;
 	}
+
 	
 	public List<Cookie> login() throws Exception{
 		Map<String, String> map = new HashMap<String, String>();
@@ -97,6 +108,7 @@ public class LoginConfig {
 		map.put("lang", "zh_CN");
 		map.put("mobile", "false");
 		map.put("umidToken", umidToken);
+
 		
 	    CloseableHttpClient httpClient = null;
 	    HttpPost httpPost = null;
