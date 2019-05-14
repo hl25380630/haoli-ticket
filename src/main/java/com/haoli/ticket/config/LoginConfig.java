@@ -54,15 +54,6 @@ public class LoginConfig {
     @Value("${damai.umidToken}")
     private String umidToken;
 	
-	@Value("${damai.nocAppKey}")
-	private String nocAppKey;
-	
-	@Value("${damai.csessionid}")
-	private String csessionid;
-	
-	@Value("${damai.sig}")
-	private String sig;
-	
     
 	@Bean
 	public DamaiClient generateDamaiClient() throws Exception{

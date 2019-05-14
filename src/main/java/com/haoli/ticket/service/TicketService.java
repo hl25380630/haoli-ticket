@@ -2,6 +2,7 @@ package com.haoli.ticket.service;
 
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -31,6 +32,17 @@ public class TicketService {
 	@Value("${damai.mainPage.url}")
 	private String damaiMainPage;
 
+	public static void main(String[] args) {
+        System.setProperty("webdriver.chrome.driver","C:\\Program Files (x86)\\Google\\Chrome\\Application\\chromedriver.exe");
+        //配置浏览器
+        ChromeOptions options=new ChromeOptions();
+        //是否已开发者模式打开浏览器
+        options.setExperimentalOption("excludeSwitches", Collections.singletonList("enable-automation"));
+        ChromeDriver browser = new ChromeDriver(options);
+        browser.manage().window().maximize(); //设置窗口最大化
+        browser.get("https://passport.damai.cn/login?ru=https%3A%2F%2Fwww.damai.cn%2F%3Futm_source%3Dsearch%26utm_medium%3Dbaidupc%26utm_content%3Dpmarket_yhcpyyb%26utm_campaign%3Dalink_bdsem_bj_shouye_0175");
+	}
+	
 	
     public void buyDamaiTicket(DamiInfo map) throws Exception {
     	//设置chrome driver位置
