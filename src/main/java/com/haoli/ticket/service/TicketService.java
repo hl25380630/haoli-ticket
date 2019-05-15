@@ -116,24 +116,21 @@ public class TicketService {
         String itemDetailPageUrl = browser.getCurrentUrl();
         List<WebElement> sessionList = browser.findElementsByClassName("select_right_list_item");
         Map<String, WebElement> priceElementMap = new HashMap<String, WebElement>();
-        List<WebElement> elementList = browser.findElementsByClassName("sku_item");
         //选择要购买的场次，点击购买
-        boolean flag1 = false;
-        WebElement targetSession = sessionList.get(0);
-        WebElement targetItem = elementList.get(0);
         label1:
         for(String sessionDetail : sessionDetailList) {
             for(WebElement session : sessionList) {
             	String sessionText = session.getText();
             	if(sessionText.contains(sessionDetail) && !sessionText.contains("缺货登记") && !sessionText.contains("无票") && !sessionText.contains("暂不可售")) {
-                    for(String priceDetail : priceDetailList) {
+            		action.click(session).perform();
+            		browser.get(itemDetailPageUrl);
+                    List<WebElement> elementList = browser.findElementsByClassName("sku_item");
+            		for(String priceDetail : priceDetailList) {
                     	for(WebElement element : elementList) {
                     		String text = element.getText();
                         	if(text.contains(priceDetail) && !text.contains("缺货登记") && !text.contains("无票") && !text.contains("暂不可售") && !text.contains("开售登记")) {
                         		priceElementMap.put(priceDetail, element);
-                        		targetItem = element;
-                        		targetSession = session;
-                        		flag1 = true;
+                        		action.click(element).perform();
                         		break label1;
                         	}
                     	}
@@ -141,11 +138,6 @@ public class TicketService {
             	}
             }
         }
-        if(flag1 == false) {
-        	throw new ConditionException("没有符合条件的商品");
-        }
-        action.click(targetSession).perform();
-		action.click(targetItem).perform();
         //选择好要购买的商品后点提交
         List<WebElement> buyButtonList = browser.findElementsByClassName("buybtn");
         if(buyButtonList.size() ==1) {
