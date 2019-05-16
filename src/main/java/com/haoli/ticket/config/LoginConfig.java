@@ -28,7 +28,7 @@ import org.springframework.context.annotation.Configuration;
 import com.alibaba.fastjson.JSONObject;
 import com.haoli.ticket.domain.DamaiClient;
 
-@Configuration
+//@Configuration
 public class LoginConfig {
 	
 	private Logger logger = LoggerFactory.getLogger(LoginConfig.class);

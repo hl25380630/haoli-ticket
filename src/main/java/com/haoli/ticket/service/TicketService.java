@@ -2,7 +2,6 @@ package com.haoli.ticket.service;
 
 import java.net.URLDecoder;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -18,16 +17,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.haoli.sdk.web.exception.ConditionException;
-import com.haoli.ticket.domain.DamaiClient;
 import com.haoli.ticket.domain.DamiInfo;
 
 
 @RestController
 public class TicketService {
 	
+	
 	@Autowired
-	private DamaiClient damaiClient;
+	CookieService cookieService;
 	
 	@Value("${damai.mainPage.url}")
 	private String damaiMainPage;
@@ -37,10 +35,11 @@ public class TicketService {
         //配置浏览器
         ChromeOptions options=new ChromeOptions();
         //是否已开发者模式打开浏览器
-        options.setExperimentalOption("excludeSwitches", Collections.singletonList("enable-automation"));
+//        options.setExperimentalOption("excludeSwitches", Collections.singletonList("enable-automation"));
         ChromeDriver browser = new ChromeDriver(options);
         browser.manage().window().maximize(); //设置窗口最大化
-        browser.get("https://passport.damai.cn/login?ru=https%3A%2F%2Fwww.damai.cn%2F%3Futm_source%3Dsearch%26utm_medium%3Dbaidupc%26utm_content%3Dpmarket_yhcpyyb%26utm_campaign%3Dalink_bdsem_bj_shouye_0175");
+        String url = "https://www.damai.cn/?spm=a2oeg.project.top.dhome.541ea4bbpI3Obg";
+        browser.get(url);
 	}
 	
 	
@@ -196,14 +195,19 @@ public class TicketService {
         action.click(finalSubmitButton).perform();
     }
 	
-	public void setCookie(ChromeDriver browser) {
-        List<Cookie> cookieList = damaiClient.getCookieList();
+    public void setCookie(ChromeDriver browser) throws Exception {
+        List<Cookie> cookieList = cookieService.getCookieList();
         for(Cookie cookie : cookieList) {
         	String name = cookie.getName();
         	String value = cookie.getValue();
         	String path = cookie.getPath();
         	Date expireDate = cookie.getExpiryDate();
-        	String domain = "." + cookie.getDomain();
+        	String domain = cookie.getDomain();
+        	System.out.println("name: " + name);
+        	System.out.println("value: " + value);
+        	System.out.println("path: " + path);
+        	System.out.println("expireDate: " + expireDate);
+        	System.out.println("domain: " + domain);
         	org.openqa.selenium.Cookie scookie = new org.openqa.selenium.Cookie(name, value, domain, path, expireDate, true);
         	browser.manage().addCookie(scookie);
         }
