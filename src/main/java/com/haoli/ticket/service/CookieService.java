@@ -45,19 +45,24 @@ public class CookieService {
 		conn.setAutoCommit(false);
 		Statement stmt = conn.createStatement();
 		stmt.setQueryTimeout(3); 
-		String sql = String.format("select * from cookies where host_key like '%%damai%%'");
+		String sql = String.format("select name,host_key,path,encrypted_value, expires_utc from cookies where host_key like '%%damai%%'");
 		ResultSet rs = stmt.executeQuery(sql);
 		List<Cookie> cookieList = new ArrayList<Cookie>();
 		while (rs.next()) {
-			
 			String name = rs.getString("name");
 			String domain = rs.getString("host_key");
 			String path = rs.getString("path");
 			String expiresUtc = rs.getString("expires_utc");
-			TimeUtil timeUtil = new TimeUtil();
-			Date expireDate = timeUtil.timeStampToDate(expiresUtc);
+			Long expiresUtcLong = Long.valueOf(expiresUtc);
+			Long unixTimeStamp = 0L;
+			String unixTimeStampStr = "";
+			if(expiresUtcLong == 0L) {
+				unixTimeStampStr = null;
+			}else {
+				unixTimeStamp = expiresUtcLong/1000000 - 11644473600L;
+				unixTimeStampStr = String.valueOf(unixTimeStamp);
+			}
 			InputStream inputStream = rs.getBinaryStream("encrypted_value");
-
 			
 			ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 			int ch;
@@ -71,13 +76,13 @@ public class CookieService {
 			System.out.println("value: " + value);
 			System.out.println("domain: " + domain);
 			System.out.println("path: " + path);
-			System.out.println("expries: " + expireDate);
+			System.out.println("expries: " + TimeUtil.timeStamp10ToSimpleDateFormat(unixTimeStampStr));
 			System.out.println("");
 			
 		    BasicClientCookie cookie = new BasicClientCookie(name, value);
 		    cookie.setDomain(domain);
 		    cookie.setPath(path);
-		    cookie.setExpiryDate(expireDate);
+		    cookie.setExpiryDate(TimeUtil.timeStamp10ToDate(unixTimeStampStr));
 			cookieList.add(cookie);
 		}
 		rs.close();
