@@ -23,7 +23,7 @@ import net.sourceforge.jdpapi.DataProtector;
 public class CookieService {
 	
 	static {
-		System.load("C:\\Users\\10063731\\Desktop\\jdpapi-1.0.1\\jdpapi-native-1.0.1.dll");
+		System.load("C:\\Users\\10063731\\Desktop\\personal\\development\\haoli-ticket\\jdpapi-1.0.1\\jdpapi-native-1.0.1.dll");
 	}
 	
 	static Connection conn = null;
