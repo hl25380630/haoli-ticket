@@ -53,17 +53,7 @@ public class CookieService {
 			String domain = rs.getString("host_key");
 			String path = rs.getString("path");
 			String expiresUtc = rs.getString("expires_utc");
-			Long expiresUtcLong = Long.valueOf(expiresUtc);
-			Long unixTimeStamp = 0L;
-			String unixTimeStampStr = "";
-			if(expiresUtcLong == 0L) {
-				unixTimeStampStr = null;
-			}else {
-				unixTimeStamp = expiresUtcLong/1000000 - 11644473600L;
-				unixTimeStampStr = String.valueOf(unixTimeStamp);
-			}
 			InputStream inputStream = rs.getBinaryStream("encrypted_value");
-			
 			ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 			int ch;
 			while ((ch = inputStream.read()) != -1) {
@@ -72,17 +62,10 @@ public class CookieService {
 			byte[] b = byteArrayOutputStream.toByteArray();
 			String value = testCoolies.decrypt(b);
 			byteArrayOutputStream.close();
-			System.out.println("name: " + name);
-			System.out.println("value: " + value);
-			System.out.println("domain: " + domain);
-			System.out.println("path: " + path);
-			System.out.println("expries: " + TimeUtil.timeStamp10ToSimpleDateFormat(unixTimeStampStr));
-			System.out.println("");
-			
 		    BasicClientCookie cookie = new BasicClientCookie(name, value);
 		    cookie.setDomain(domain);
 		    cookie.setPath(path);
-		    cookie.setExpiryDate(TimeUtil.timeStamp10ToDate(unixTimeStampStr));
+		    cookie.setExpiryDate(TimeUtil.sqliteTimeStampToDate(expiresUtc));
 			cookieList.add(cookie);
 		}
 		rs.close();

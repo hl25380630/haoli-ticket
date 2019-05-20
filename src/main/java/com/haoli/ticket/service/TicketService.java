@@ -23,26 +23,12 @@ import com.haoli.ticket.domain.DamiInfo;
 @RestController
 public class TicketService {
 	
-	
 	@Autowired
 	CookieService cookieService;
 	
 	@Value("${damai.mainPage.url}")
 	private String damaiMainPage;
 
-	public static void main(String[] args) {
-        System.setProperty("webdriver.chrome.driver","C:\\Program Files (x86)\\Google\\Chrome\\Application\\chromedriver.exe");
-        //配置浏览器
-        ChromeOptions options=new ChromeOptions();
-        //是否已开发者模式打开浏览器
-//        options.setExperimentalOption("excludeSwitches", Collections.singletonList("enable-automation"));
-        ChromeDriver browser = new ChromeDriver(options);
-        browser.manage().window().maximize(); //设置窗口最大化
-        String url = "https://www.damai.cn/?spm=a2oeg.project.top.dhome.541ea4bbpI3Obg";
-        browser.get(url);
-	}
-	
-	
     public void buyDamaiTicket(DamiInfo map) throws Exception {
     	//设置chrome driver位置
     	String chromeDriverPath = map.getChromeDriverPath();
@@ -53,13 +39,11 @@ public class TicketService {
         System.setProperty("webdriver.chrome.driver",chromeDriverPath);
         //配置浏览器
         ChromeOptions options=new ChromeOptions();
-        //是否已开发者模式打开浏览器
-        //options.setExperimentalOption("excludeSwitches", Collections.singletonList("enable-automation"));
         ChromeDriver browser = new ChromeDriver(options);
         browser.manage().window().maximize(); //设置窗口最大化
         //大麦网首页
         browser.get(damaiMainPage);
-        //模拟登录，讲cookie写入浏览器，绕过登录验证
+        //模拟登录，将cookie写入浏览器，绕过登录验证
         this.setCookie(browser);
         Thread.sleep(1000);
         //刷新页面达到登录效果
@@ -203,11 +187,6 @@ public class TicketService {
         	String path = cookie.getPath();
         	Date expireDate = cookie.getExpiryDate();
         	String domain = cookie.getDomain();
-        	System.out.println("name: " + name);
-        	System.out.println("value: " + value);
-        	System.out.println("path: " + path);
-        	System.out.println("expireDate: " + expireDate);
-        	System.out.println("domain: " + domain);
         	org.openqa.selenium.Cookie scookie = new org.openqa.selenium.Cookie(name, value, domain, path, expireDate, true);
         	browser.manage().addCookie(scookie);
         }
